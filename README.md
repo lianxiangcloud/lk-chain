@@ -7,7 +7,8 @@ Supporting golang implementation of the Ethereum protocol.
 ## Building the source
 
 Building lk-chain requires Go (version 1.9.2).  
-System Centos 7.
+System Centos 7.  
+Install [**git lfs**](https://git-lfs.github.com/) before, and then clone this project.  
 To build the full suite of utilities:
 
 ```shell
