@@ -1,0 +1,22 @@
+package: github.com/tendermint/ethermint
+import:
+- package: github.com/tendermint/tendermint
+  version: 0.15.x
+- package: github.com/tendermint/abci
+  version: 0.9.x
+- package: github.com/ethereum/go-ethereum
+  version: f1.7.3
+  repo: https://github.com/tendermint/go-ethereum.git
+- package: github.com/tendermint/tmlibs
+  version: master
+  subpackages:
+  - cli
+  - cli/flags
+  - common
+  - events
+  - log
+  - logger
+- package: github.com/tendermint/go-wire
+  version: master
+- package: github.com/tendermint/go-crypto
+  version: master

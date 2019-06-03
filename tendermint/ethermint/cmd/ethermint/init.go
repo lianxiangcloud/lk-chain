@@ -1,0 +1,145 @@
+package main
+
+import (
+	"context"
+	"os"
+	"time"
+	"os/exec"
+	"path/filepath"
+
+	"gopkg.in/urfave/cli.v1"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/common"
+	ethUtils "github.com/ethereum/go-ethereum/cmd/utils"
+	emtUtils "github.com/tendermint/ethermint/cmd/utils"
+)
+
+// nolint: gocyclo
+func initCmd(ctx *cli.Context) error {
+	genesisPath := ctx.Args().First()
+	var genesis *core.Genesis
+	var err error
+	if ctx.GlobalIsSet(emtUtils.LKOnlineFlag.Name) {
+		genesis = emtUtils.GenesisBlockNoAlloc()
+	} else {
+		genesis, err = emtUtils.ParseGenesisOrDefault(genesisPath)
+		if err != nil {
+			ethUtils.Fatalf("genesisJSON err: %v", err)
+		}
+	}
+
+	ethermintDataDir := emtUtils.MakeDataDir(ctx)
+
+	// Step 1:
+	// If requested, invoke: tendermint init --home ethermintDataDir/tendermint
+	// See https://github.com/tendermint/ethermint/issues/244
+	canInvokeTendermintInit := canInvokeTendermint(ctx)
+	if canInvokeTendermintInit {
+		tendermintHome := filepath.Join(ethermintDataDir, "tendermint")
+		tendermintArgs := []string{"init", "--home", tendermintHome}
+		_, err = invokeTendermint(tendermintArgs...)
+		if err != nil {
+			ethUtils.Fatalf("tendermint init error: %v", err)
+		}
+		log.Info("successfully invoked `tendermint`", "args", tendermintArgs)
+	}
+
+	chainDb, err := ethdb.NewLDBDatabase(filepath.Join(ethermintDataDir, "ethermint/chaindata"), 0, 0)
+	if err != nil {
+		ethUtils.Fatalf("could not open database: %v", err)
+	}
+
+	var (
+		statedbDir string
+		hash       common.Hash
+	)
+	if ctx.GlobalIsSet(emtUtils.LKStateFlag.Name) {
+		statedbDir = ctx.GlobalString(emtUtils.LKStateFlag.Name)
+	}
+	if len(statedbDir) > 0 {
+		_, hash, err = core.SetupGenesisBlockWithState(chainDb, genesis, statedbDir)
+	} else {
+		_, hash, err = core.SetupGenesisBlock(chainDb, genesis)
+	}
+	if err != nil {
+		ethUtils.Fatalf("failed to write genesis block: %v", err)
+	}
+
+	log.Info("[sys-genesis] successfully wrote genesis block and/or chain rule set", "hash", hash, "genesis", *genesis)
+
+	// As per https://github.com/tendermint/ethermint/issues/244#issuecomment-322024199
+	// Let's implicitly add in the respective keystore files
+	// to avoid manually doing this step:
+	// $ cp -r $GOPATH/src/github.com/tendermint/ethermint/setup/keystore $(DATADIR)
+	keystoreDir := filepath.Join(ethermintDataDir, "keystore")
+	if err := os.MkdirAll(keystoreDir, 0777); err != nil {
+		ethUtils.Fatalf("mkdirAll keyStoreDir: %v", err)
+	}
+
+	for filename, content := range keystoreFilesMap {
+		storeFileName := filepath.Join(keystoreDir, filename)
+		f, err := os.Create(storeFileName)
+		if err != nil {
+			log.Error("create %q err: %v", storeFileName, err)
+			continue
+		}
+		if _, err := f.Write([]byte(content)); err != nil {
+			log.Error("write content %q err: %v", storeFileName, err)
+		}
+		if err := f.Close(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+var keystoreFilesMap = map[string]string{
+	// https://github.com/tendermint/ethermint/blob/edc95f9d47ba1fb7c8161182533b5f5d5c5d619b/setup/keystore/UTC--2016-10-21T22-30-03.071787745Z--7eff122b94897ea5b0e2a9abf47b86337fafebdc
+	// OR
+	// $GOPATH/src/github.com/ethermint/setup/keystore/UTC--2016-10-21T22-30-03.071787745Z--7eff122b94897ea5b0e2a9abf47b86337fafebdc
+	"UTC--2016-10-21T22-30-03.071787745Z--7eff122b94897ea5b0e2a9abf47b86337fafebdc": `
+{
+  "address":"7eff122b94897ea5b0e2a9abf47b86337fafebdc",
+  "id":"f86a62b4-0621-4616-99af-c4b7f38fcc48","version":3,
+  "crypto":{
+    "cipher":"aes-128-ctr","ciphertext":"19de8a919e2f4cbdde2b7352ebd0be8ead2c87db35fc8e4c9acaf74aaaa57dad",
+    "cipherparams":{"iv":"ba2bd370d6c9d5845e92fbc6f951c792"},
+    "kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"c7cc2380a96adc9eb31d20bd8d8a7827199e8b16889582c0b9089da6a9f58e84"},
+    "mac":"ff2c0caf051ca15d8c43b6f321ec10bd99bd654ddcf12dd1a28f730cc3c13730"
+  }
+}
+`,
+	"UTC--2018-04-15T05-21-48.033606105Z--54fb1c7d0f011dd63b08f85ed7b518ab82028100": `
+{"address":"54fb1c7d0f011dd63b08f85ed7b518ab82028100","crypto":{"cipher":"aes-128-ctr","ciphertext":"e77ec15da9bdec5488ce40b07a860fb5383dffce6950defeb80f6fcad4916b3a","cipherparams":{"iv":"5df504a561d39675b0f9ebcbafe5098c"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"908cd3b189fc8ceba599382cf28c772b735fb598c7dbbc59ef0772d2b851f57f"},"mac":"9bb92ffd436f5248b73a641a26ae73c0a7d673bb700064f388b2be0f35fedabd"},"id":"2e15f180-b4f1-4d9c-b401-59eeeab36c87","version":3}
+`,
+}
+
+// nolint: unparam
+func invokeTendermintNoTimeout(args ...string) ([]byte, error) {
+	return _invokeTendermint(context.TODO(), args...)
+}
+
+func _invokeTendermint(ctx context.Context, args ...string) ([]byte, error) {
+	log.Info("Invoking `tendermint`", "args", args)
+	cmd := exec.CommandContext(ctx, "tendermint", args...)
+	return cmd.CombinedOutput()
+}
+
+// nolint: unparam
+func invokeTendermint(args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return _invokeTendermint(ctx, args...)
+}
+
+func canInvokeTendermint(ctx *cli.Context) bool {
+	return ctx.GlobalBool(emtUtils.WithTendermintFlag.Name)
+}
+
+func tendermintHomeFromEthermint(ctx *cli.Context) string {
+	ethermintDataDir := emtUtils.MakeDataDir(ctx)
+	return filepath.Join(ethermintDataDir, "tendermint")
+}

@@ -1,0 +1,89 @@
+{
+    "genesis_time": "0001-01-01T00:00:00Z",
+    "chain_id": "chain",
+    "validators": [
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "00BA4073CC0E06C7EDC1415BEC82FB030D7FF924656835AD7BC1B3A7267B2F6C"
+            },
+            "power": 10,
+            "name": "node0"
+        },
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "010748B881FA460A2DB502B86B1A5D690A57D3F681342ABBD7F29F91AD5C2708"
+            },
+            "power": 10,
+            "name": "node1"
+        },
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "054B819772DD7200B2D6B5BB62E352D97537883A8E144ED7112D5994D41C3AFD"
+            },
+            "power": 10,
+            "name": "node2"
+        },
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "061AF0BE8DFF8527A5FBAA823962797BA1841D13A608E143E7451A533C6AEFD6"
+            },
+            "power": 10,
+            "name": "node3"
+        },
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "07B5CFFD39D42DEF72771AEBCBA4B0A0E8A169C883A01141EA57DFD12341A925"
+            },
+            "power": 10,
+            "name": "node4"
+        },
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "144F684BE0013683150211C7BE3E078427697F41F37CFF8BAAFBDAD952A1E8BC"
+            },
+            "power": 10,
+            "name": "node5"
+        },
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "145C8492760D1E26CEEA990F31C2A0BCB777BCA2BC38523B9A1CF96D55F7663C"
+            },
+            "power": 10,
+            "name": "node6"
+        },
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "0A5E7716D548176ED50137EABC25AEE533ADC4859FCAC3ADB6D5BC5BD8F62170"
+            },
+            "power": 10,
+            "name": "node7"
+        },
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "0BB838F482F088B13B6DE31B102F8B7F57D8B9796B28374C428DFF0A4A841BC7"
+            },
+            "power": 10,
+            "name": "node8"
+        },
+        {
+            "pub_key": {
+                "type": "ed25519",
+                "data": "13C8193D532EAC719AA400E76D2D1A3179902B0C7F901BDFF8702B9EE81A157F"
+            },
+            "power": 10,
+            "name": "node9"
+        }
+    ],
+    "app_hash": "",
+    "block_num": 0,
+    "coinbase": ""
+}
