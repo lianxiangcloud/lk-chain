@@ -161,6 +161,8 @@ type ChainConfig struct {
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
+
+	FeeUpdateTime uint64 `json:"-"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.

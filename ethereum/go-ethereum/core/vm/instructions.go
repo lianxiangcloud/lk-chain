@@ -681,6 +681,10 @@ func opCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Sta
 	ret, returnGas, err := evm.Call(contract, toAddr, args, gas, value)
 	if err != nil {
 		log.Warn("evm.Call", "err", err)
+
+		log.Info("TxBatch with error, cancel it")
+		evm.tb.Cancel()
+
 		stack.push(evm.interpreter.intPool.getZero())
 	} else {
 		stack.push(evm.interpreter.intPool.get().SetUint64(1))

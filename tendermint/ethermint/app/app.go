@@ -442,8 +442,17 @@ func (app *EthermintApplication) validateEthTx(tx *ethTypes.Transaction, txType 
 	reportData.Gas   = tx.Gas().String()
 	reportData.Nonce = tx.Nonce()
 
-	if tx.IllegalGasLimitOrGasPrice(hashcode) {
-		log.Error("[lktx] validateEthTx:", "hash", txHashStr, "err", core.ErrGasLimitOrGasPrice)
+	lastBlockTime := app.backend.Ethereum().BlockChain().CurrentBlock().Time().Uint64()
+	feeUpdateTime := app.backend.Config().FeeUpdateTime
+	var gasFail = false
+	if feeUpdateTime != 0 && lastBlockTime >= feeUpdateTime {
+		gasFail = tx.IllegalGasLimitOrGasPrice(hashcode, true)
+	} else {
+		gasFail = tx.IllegalGasLimitOrGasPrice(hashcode, false)
+	}
+
+	if gasFail {
+		log.Error("[ottx] validateEthTx:", "hash", txHashStr, "err", core.ErrGasLimitOrGasPrice)
 		reportData.Result = reporttrans.ERR_GAS_LIMIT_OR_GAS_PRICE
 		reporttrans.Report(reportData)
 		return abciTypes.ResponseCheckTx{
@@ -477,17 +486,17 @@ func (app *EthermintApplication) validateEthTx(tx *ethTypes.Transaction, txType 
 	}
 
 	// Check the transaction doesn't exceed the current block limit gas.
-	gasLimit := app.backend.GasLimit()
-	if gasLimit.Cmp(tx.Gas()) < 0 {
-		log.Error("[lktx] validateEthTx:", "hash", txHashStr, "gas", tx.Gas().Uint64(),
-			"gasLimit", gasLimit.Uint64(), "err", core.ErrGasLimitReached)
-		reportData.Result = reporttrans.ERR_GAS_LIMIT
-		reporttrans.Report(reportData)
-		return abciTypes.ResponseCheckTx{
-			Code: 1,
-			Log:  core.ErrGasLimitReached.Error(),
-		}
-	}
+	//gasLimit := app.backend.GasLimit()
+	//if gasLimit.Cmp(tx.Gas()) < 0 {
+	//	log.Error("[lktx] validateEthTx:", "hash", txHashStr, "gas", tx.Gas().Uint64(),
+	//		"gasLimit", gasLimit.Uint64(), "err", core.ErrGasLimitReached)
+	//	reportData.Result = reporttrans.ERR_GAS_LIMIT
+	//	reporttrans.Report(reportData)
+	//	return abciTypes.ResponseCheckTx{
+	//		Code: 1,
+	//		Log:  core.ErrGasLimitReached.Error(),
+	//	}
+	//}
 
 	currentState := app.checkTxState
 

@@ -50,6 +50,7 @@ var DefaultConfig = Config{
 		Percentile: 50,
 	},
 	PocketAPI: "https://pocketapi.lianxiangcloud.com",
+	FeeUpdateTime: 1560340800, //2019-06-12 20:00:00
 }
 
 func init() {
@@ -116,6 +117,7 @@ type Config struct {
 	PowShared bool   `toml:"-"`
 
 	PocketAPI string `toml:",omitempty"`
+	FeeUpdateTime uint64 `toml:"-"`
 }
 
 type configMarshaling struct {

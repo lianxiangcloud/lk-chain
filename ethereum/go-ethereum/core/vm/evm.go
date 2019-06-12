@@ -184,12 +184,25 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}
 		evm.StateDB.CreateAccount(addr)
 	}
-	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, value, gas)
 	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+
+	var totalFee uint64
+	blockTime := evm.Context.Time.Uint64()
+	feeUpdateTime := evm.vmConfig.FeeUpdateTime
+	isFeeUpdate := feeUpdateTime != 0 && blockTime >= feeUpdateTime && len(contract.Code) > 0 && value.Sign() > 0
+	if isFeeUpdate {
+		totalFee = common.CalNewFee(value)
+		if !contract.UseGas(totalFee) {
+			contract.UseGas(contract.Gas)
+			return nil, contract.Gas, ErrOutOfGas
+		}
+	}
+
+	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
 	// @Note: ywh
 	// start := time.Now()
@@ -211,8 +224,14 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
+		} else {
+			//evm: execution reverted
+			if isFeeUpdate {
+				contract.Gas += totalFee
+			}
 		}
 	}
+
 	return ret, contract.Gas, err
 }
 
@@ -357,13 +376,26 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	snapshot := evm.StateDB.Snapshot()
 	evm.StateDB.CreateAccount(contractAddr)
 	evm.StateDB.SetNonce(contractAddr, 1)
-	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
 	contract.SetCallCode(&contractAddr, crypto.Keccak256Hash(code), code)
+
+	var totalFee uint64
+	blockTime := evm.Context.Time.Uint64()
+	feeUpdateTime := evm.vmConfig.FeeUpdateTime
+	ifFeeUpdate := feeUpdateTime != 0 && blockTime >= feeUpdateTime && len(contract.Code) > 0 && value.Sign() > 0
+	if ifFeeUpdate {
+		totalFee = common.CalNewFee(value)
+		if !contract.UseGas(totalFee) {
+			contract.UseGas(contract.Gas)
+			return nil, contractAddr, contract.Gas, ErrOutOfGas
+		}
+	}
+
+	evm.Transfer(evm.StateDB, caller.Address(), contractAddr, value)
 
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, contractAddr, gas, nil
@@ -399,8 +431,14 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
+		} else {
+			// evm: execution reverted
+			if ifFeeUpdate {
+				contract.Gas += totalFee
+			}
 		}
 	}
+
 	// Assign err if contract code size exceeds the max while the err is still empty.
 	if maxCodeSizeExceeded && err == nil {
 		err = errMaxCodeSizeExceeded

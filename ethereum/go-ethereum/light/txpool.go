@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"third_part/lklog"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -31,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
-	"third_part/lklog"
 )
 
 const (
@@ -339,7 +340,7 @@ func (pool *TxPool) Stats() (pending int) {
 
 // validateTx checks whether a transaction is valid according to the consensus rules.
 func (pool *TxPool) validateTx(ctx context.Context, tx *types.Transaction) error {
-	if tx.IllegalGasLimitOrGasPrice(true) {
+	if tx.IllegalGasLimitOrGasPrice(true, true) {
 		log.Error("Unallowed value", "gasLimit", tx.Gas(), "gasPrice", tx.GasPrice())
 		lklog.Warn("1030008\x01Unallowed value[2]\x02gasLimit is", tx.Gas(), "\x02gasPrice is", tx.GasPrice())
 		return core.ErrGasLimitOrGasPrice
@@ -364,10 +365,10 @@ func (pool *TxPool) validateTx(ctx context.Context, tx *types.Transaction) error
 
 	// Check the transaction doesn't exceed the current
 	// block limit gas.
-	header := pool.chain.GetHeaderByHash(pool.head)
-	if header.GasLimit.Cmp(tx.Gas()) < 0 {
-		return core.ErrGasLimit
-	}
+	//header := pool.chain.GetHeaderByHash(pool.head)
+	//if header.GasLimit.Cmp(tx.Gas()) < 0 {
+	//	return core.ErrGasLimit
+	//}
 
 	// Transactions can't be negative. This may never happen
 	// using RLP decoded transactions but may occur if you create

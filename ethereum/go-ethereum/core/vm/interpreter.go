@@ -41,6 +41,8 @@ type Config struct {
 	// may be left uninitialised and will be set to the default
 	// table.
 	JumpTable [256]operation
+
+	FeeUpdateTime uint64
 }
 
 // Interpreter is used to run Ethereum based contracts and will utilise the

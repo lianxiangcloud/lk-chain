@@ -24,6 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"third_part/lklog"
+	"third_part/reporttrans"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -32,8 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/params"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"third_part/lklog"
-	"third_part/reporttrans"
 )
 
 const (
@@ -158,7 +159,8 @@ type TxPoolConfig struct {
 	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
 	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
 
-	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
+	Lifetime      time.Duration // Maximum amount of time non-executable transaction are queued
+	FeeUpdateTime uint64
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -652,7 +654,17 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	reportData.Cost = tx.Cost().String()
 	reportData.Gas = tx.Gas().String()
 	reportData.Nonce = tx.Nonce()
-	if tx.IllegalGasLimitOrGasPrice(hashcode) {
+
+	lastBlockTime := pool.chain.CurrentBlock().Time().Uint64()
+	feeUpdateTime := pool.config.FeeUpdateTime
+	var gasFail = false
+	if feeUpdateTime != 0 && lastBlockTime >= feeUpdateTime {
+		gasFail = tx.IllegalGasLimitOrGasPrice(hashcode, true)
+	} else {
+		gasFail = tx.IllegalGasLimitOrGasPrice(hashcode, false)
+	}
+
+	if gasFail {
 		reportData.Result = reporttrans.ERR_GAS_LIMIT_OR_GAS_PRICE
 		reporttrans.Report(reportData)
 		log.Error("Unallowed value", "gasLimit", tx.Gas(), "gasPrice", tx.GasPrice())
@@ -672,12 +684,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		reportData.Result = reporttrans.ERR_SIGN
 		reporttrans.Report(reportData)
 		return ErrNegativeValue
-	}
-	// Ensure the transaction doesn't exceed the current block limit gas.
-	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
-		reportData.Result = reporttrans.ERR_GAS_LIMIT
-		reporttrans.Report(reportData)
-		return ErrGasLimit
 	}
 
 	if tx.To() != nil {

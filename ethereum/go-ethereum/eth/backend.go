@@ -117,6 +117,10 @@ func New(ctx *node.ServiceContext, config *Config, pending miner.Pending) (*Ethe
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
+
+	config.TxPool.FeeUpdateTime = config.FeeUpdateTime
+	chainConfig.FeeUpdateTime = config.FeeUpdateTime
+
 	log.Info("Initialised chain configuration", "chainConfig", chainConfig.String())
 
 	eth := &Ethereum{

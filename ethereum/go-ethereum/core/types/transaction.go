@@ -24,12 +24,12 @@ import (
 	"math/big"
 	"sync/atomic"
 	"encoding/json"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"strings"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -114,11 +114,10 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	// 非合约gasLimit会等于gasUsed, 这样gasLimit * gasPrice = 0.01 (eth)
 	gasPrice = big.NewInt(1e11)
 	d.Price.Set(gasPrice)
-	if !isContract(data) {
-		gasLimit = big.NewInt(1e5)
-	}
-	if gasLimit != nil {
+	if gasLimit.Sign() > 0 {
 		d.GasLimit.Set(gasLimit)
+	} else {
+		d.GasLimit.SetUint64(common.CalNewFee(amount))
 	}
 
 	return &Transaction{data: d}
@@ -136,9 +135,28 @@ func isContract(data []byte) bool {
 	return false
 }
 
-func (tx *Transaction) IllegalGasLimitOrGasPrice(hashcode bool) bool {
+func (tx *Transaction) IllegalGasLimitOrGasPrice(hashcode bool, newFunc bool) bool {
 	if tx.GasPrice().Cmp(big.NewInt(1e11)) != 0 {
 		return true
+	}
+
+	if newFunc {
+		gasFee := common.CalNewFee(tx.Value())
+		iscontract := isContract(tx.Data())
+
+		if tx.Value().Cmp(big.NewInt(0)) > 0 {
+			if gasFee > tx.Gas().Uint64() {
+				return true
+			}
+		}
+		if iscontract && tx.To() == nil {
+			return false
+		}
+		if !hashcode && gasFee != tx.Gas().Uint64() {
+			return true
+		}
+
+		return false
 	}
 
 	iscontract := isContract(tx.Data())

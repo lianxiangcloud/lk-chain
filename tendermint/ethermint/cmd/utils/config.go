@@ -1,17 +1,17 @@
 package utils
 
 import (
-	"os"
 	"math/big"
+	"os"
 
-	cli "gopkg.in/urfave/cli.v1"
+	ethUtils "github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/tendermint/ethermint/ethereum"
-	ethUtils "github.com/ethereum/go-ethereum/cmd/utils"
 	rpcClient "github.com/tendermint/tendermint/rpc/lib/client"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -75,11 +75,11 @@ func makeConfigNode(ctx *cli.Context) (*ethereum.Node, gethConfig) {
 // DefaultNodeConfig returns the default configuration for a go-ethereum node
 func DefaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
-	cfg.Name        = clientIdentifier
-	cfg.Version     = params.Version
+	cfg.Name = clientIdentifier
+	cfg.Version = params.Version
 	cfg.HTTPModules = append(cfg.HTTPModules, "eth")
-	cfg.WSModules   = append(cfg.WSModules, "eth")
-	cfg.IPCPath     = "geth.ipc"
+	cfg.WSModules = append(cfg.WSModules, "eth")
+	cfg.IPCPath = "geth.ipc"
 
 	emHome := os.Getenv(emHome)
 	if emHome != "" {
@@ -91,7 +91,7 @@ func DefaultNodeConfig() node.Config {
 
 // SetEthermintNodeConfig takes a node configuration and applies ethermint specific configuration
 func SetEthermintNodeConfig(cfg *node.Config) {
-	cfg.P2P.MaxPeers    = 0
+	cfg.P2P.MaxPeers = 0
 	cfg.P2P.NoDiscovery = true
 }
 

@@ -132,7 +132,7 @@ func (p *pending) Pending() (*ethTypes.Block, *state.StateDB) {
 	), p.work.state.Copy()
 }
 
-func (p *pending) PendingBlock() (*ethTypes.Block) {
+func (p *pending) PendingBlock() *ethTypes.Block {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -183,7 +183,7 @@ func (w *work) deliverTx(blockchain *core.BlockChain, config *eth.Config, chainC
 		w.header,
 		tx,
 		w.totalUsedGas,
-		vm.Config{EnablePreimageRecording: config.EnablePreimageRecording},
+		vm.Config{EnablePreimageRecording: config.EnablePreimageRecording, FeeUpdateTime: config.FeeUpdateTime},
 		tb,
 	)
 	if err != nil {

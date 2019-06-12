@@ -45,8 +45,8 @@ import (
 )
 
 const (
-	defaultGas      = 90000
-	defaultGasPrice = 50 * params.Shannon
+	defaultGas      = 0
+	defaultGasPrice = 1e11
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -657,6 +657,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	defer func() { cancel() }()
 
 	// Get a new instance of the EVM.
+	vmCfg.FeeUpdateTime = s.b.ChainConfig().FeeUpdateTime
 	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
 		return nil, common.Big0, false, err
@@ -700,13 +701,27 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*
 		hi = (*big.Int)(&args.Gas).Uint64()
 	} else {
 		// Retrieve the current pending block to act as the gas ceiling
-		block, err := s.b.BlockByNumber(ctx, rpc.LatestBlockNumber)
-		if err != nil {
-			return nil, err
-		}
-		hi = block.GasLimit().Uint64()
+		(*big.Int)(&args.Gas).SetUint64(common.MaxGasLimit * 2)
+		hi = common.MaxGasLimit * 2
 	}
 	cap = hi
+
+	newFeeRule := s.b.CurrentBlock().Time().Uint64() >= s.b.ChainConfig().FeeUpdateTime && s.b.ChainConfig().FeeUpdateTime != 0
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return nil, fmt.Errorf("state get failed.")
+	}
+	if args.To != nil {
+		if state.GetCodeSize(*args.To) == 0 {
+			if newFeeRule {
+				gasFee := common.CalNewFee(args.Value.ToInt())
+				return (*hexutil.Big)(big.NewInt(int64(gasFee))), nil
+			} else {
+				return (*hexutil.Big)(big.NewInt(1e5)), nil
+			}
+		}
+	}
 
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) bool {
@@ -1207,7 +1222,6 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 
@@ -1248,6 +1262,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if err != nil {
 		return common.Hash{}, err
 	}
+
 	return submitTransactionAPI(s.apiURL, data)
 }
 
