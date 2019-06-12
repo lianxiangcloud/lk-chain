@@ -8,6 +8,7 @@ tendermint=${ROOTDIR}/tendermint/tendermint
 
 pack=pack
 packfile=lk-chain
+tarfile=lk-chain-linux-x64.tar.gz
 packdst=pack/$packfile
 
 if [ ! -e $BIN ]; then
@@ -90,7 +91,7 @@ function do_pack()
     cp tools/genesis.json $packdst/data
     cp ethermint_init_satate/state.db_20190510.tar.gz $packdst/data/state.db.tar.gz
 
-    cd pack ; tar zcf $packfile.tar.gz $packfile ; echo "done $packdst.tar.gz";
+    cd pack ; tar zcf $tarfile $packfile ; echo "done $tarfile";
 }
 
 function main()

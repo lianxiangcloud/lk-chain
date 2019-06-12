@@ -10,7 +10,7 @@ all: install test
 
 #install: get_vendor_deps
 install:
-	@go install \
+	@GOOS=linux GOARCH=amd64  go install \
 		--ldflags "-X github.com/tendermint/ethermint/version.GitCommit=`git rev-parse HEAD`" \
 		./cmd/ethermint	
 

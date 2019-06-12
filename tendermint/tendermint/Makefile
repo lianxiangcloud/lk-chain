@@ -28,7 +28,7 @@ dist:
 	@BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/dist.sh'"
 
 install:
-	go install $(BUILD_FLAGS) ./cmd/tendermint
+	GOOS=linux GOARCH=amd64 go install $(BUILD_FLAGS) ./cmd/tendermint
 
 
 ########################################
