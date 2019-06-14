@@ -80,6 +80,7 @@ type receiptStorageRLP struct {
 	ContractAddress   common.Address
 	Logs              []*LogForStorage
 	GasUsed           *big.Int
+	Status            uint
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
@@ -160,6 +161,7 @@ func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
 		ContractAddress:   r.ContractAddress,
 		Logs:              make([]*LogForStorage, len(r.Logs)),
 		GasUsed:           r.GasUsed,
+		Status:            r.Status,
 	}
 	for i, log := range r.Logs {
 		enc.Logs[i] = (*LogForStorage)(log)
@@ -174,9 +176,9 @@ func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&dec); err != nil {
 		return err
 	}
-	if err := (*Receipt)(r).setStatus(dec.PostStateOrStatus); err != nil {
-		return err
-	}
+	// if err := (*Receipt)(r).setStatus(dec.PostStateOrStatus); err != nil {
+	// 	return err
+	// }
 	// Assign the consensus fields
 	r.CumulativeGasUsed, r.Bloom = dec.CumulativeGasUsed, dec.Bloom
 	r.Logs = make([]*Log, len(dec.Logs))
@@ -184,7 +186,7 @@ func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
 		r.Logs[i] = (*Log)(log)
 	}
 	// Assign the implementation fields
-	r.TxHash, r.ContractAddress, r.GasUsed = dec.TxHash, dec.ContractAddress, dec.GasUsed
+	r.TxHash, r.ContractAddress, r.GasUsed, r.Status = dec.TxHash, dec.ContractAddress, dec.GasUsed, dec.Status
 	return nil
 }
 
