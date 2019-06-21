@@ -751,6 +751,22 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*
 	return (*hexutil.Big)(new(big.Int).SetUint64(hi)), nil
 }
 
+// EstimateSweepGas returns an estimate of the amount of gas needed to execute the
+// sweep transaction against the current latest block.
+func (s *PublicBlockChainAPI) EstimateSweepGas(ctx context.Context, address common.Address) (*types.SweepGas, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	b := state.GetBalance(address)
+
+	amount, change, fee, err := common.CalSweepBalanceFee(b)
+
+	fields := types.SweepGas{(*hexutil.Big)(b), (*hexutil.Big)(amount), (*hexutil.Big)(change), fee}
+
+	return &fields, err
+}
+
 // ExecutionResult groups all structured logs emitted by the EVM
 // while replaying a transaction in debug mode as well as transaction
 // execution status, the amount of gas used and the return value

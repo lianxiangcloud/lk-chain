@@ -129,6 +129,11 @@ func (b *ContractBackend) EstimateGas(ctx context.Context, msg ethereum.CallMsg)
 	return out.ToInt(), err
 }
 
+func (b *ContractBackend) EstimateSweepGas(ctx context.Context, account common.Address) (*types.SweepGas, error) {
+	sweep, err := b.bcapi.EstimateSweepGas(ctx, account)
+	return sweep, err
+}
+
 // SendTransaction implements bind.ContractTransactor injects the transaction
 // into the pending pool for execution.
 func (b *ContractBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {

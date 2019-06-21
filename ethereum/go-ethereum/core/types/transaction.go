@@ -18,13 +18,13 @@ package types
 
 import (
 	"container/heap"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
-	"sync/atomic"
-	"encoding/json"
 	"strings"
+	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -569,4 +569,11 @@ func (m Message) Gas() *big.Int        { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
-func (m *Message) SetNonce(val bool)      { m.checkNonce = val }
+func (m *Message) SetNonce(val bool)   { m.checkNonce = val }
+
+type SweepGas struct {
+	Balance *hexutil.Big `json:"balance"    gencodec:"required"`
+	Amount  *hexutil.Big `json:"amount"    gencodec:"required"`
+	Change  *hexutil.Big `json:"change"    gencodec:"required"`
+	Gas     uint64       `json:"gas"    gencodec:"required"`
+}

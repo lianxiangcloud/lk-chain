@@ -464,6 +464,15 @@ func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (*big.I
 	return (*big.Int)(&hex), nil
 }
 
+func (ec *Client) EstimateSweepGas(ctx context.Context, account common.Address) (*types.SweepGas, error) {
+	var sweep *types.SweepGas
+	err := ec.c.CallContext(ctx, &sweep, "eth_estimateSweepGas", account)
+	if err != nil {
+		return nil, err
+	}
+	return sweep, nil
+}
+
 // SendTransaction injects a signed transaction into the pending pool for execution.
 //
 // If the transaction was a contract creation use the TransactionReceipt method to get the

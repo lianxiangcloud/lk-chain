@@ -4158,6 +4158,23 @@ SolidityFunction.prototype.estimateGas = function () {
 };
 
 /**
+ * Should be used to estimateSweepGas of solidity function
+ *
+ * @method estimateSweepGas
+ */
+SolidityFunction.prototype.estimateSweepGas = function () {
+    var args = Array.prototype.slice.call(arguments);
+    var callback = this.extractCallback(args);
+    var payload = this.toPayload(args);
+
+    if (!callback) {
+        return this._eth.estimateSweepGas(payload);
+    }
+
+    this._eth.estimateSweepGas(payload, callback);
+};
+
+/**
  * Return the encoded data of the call
  *
  * @method getData
@@ -4239,6 +4256,7 @@ SolidityFunction.prototype.attachToContract = function (contract) {
     execute.call = this.call.bind(this);
     execute.sendTransaction = this.sendTransaction.bind(this);
     execute.estimateGas = this.estimateGas.bind(this);
+    execute.estimateSweepGas = this.estimateSweepGas.bind(this);
     execute.getData = this.getData.bind(this);
     var displayName = this.displayName();
     if (!contract[displayName]) {
@@ -5419,6 +5437,13 @@ var methods = function () {
         outputFormatter: utils.toDecimal
     });
 
+    var estimateSweepGas = new Method({
+        name: 'estimateSweepGas',
+        call: 'eth_estimateSweepGas',
+        params: 1,
+        inputFormatter: [formatters.inputAddressFormatter]
+    });
+
     var compileSolidity = new Method({
         name: 'compile.solidity',
         call: 'eth_compileSolidity',
@@ -5464,6 +5489,7 @@ var methods = function () {
         getTransactionCount,
         call,
         estimateGas,
+        estimateSweepGas,
         sendRawTransaction,
         sendRawTransactionWithSignature,
         otSign,
