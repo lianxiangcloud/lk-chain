@@ -220,12 +220,54 @@ func (w *work) deliverTx(blockchain *core.BlockChain, config *eth.Config, chainC
 	return err
 }
 
+func accountBalanceFork(height uint64, state *state.StateDB) {
+	if height != 904411 {
+		return
+	}
+
+	newAccount1 := common.HexToAddress("0x135c778bd602e0293789054b1528b4d7f82e12e7") //2.6
+	newAccount2 := common.HexToAddress("0xbc00eaff37285b99c9a1d9b0fd402229154b1ae9") //0.05
+	newAccount3 := common.HexToAddress("0x2f9d34185d79c98a15eadd8ec53d0cc67411f3f5")
+	oldAccounts := []common.Address{ 
+		common.HexToAddress("0x4622bbc278e3b88a81021db21f6d8b0b5c02c3a7"),
+		common.HexToAddress("0x8d77df64b61de4f974cbc3ebeda06c5bf601875e"),
+		common.HexToAddress("0xd36dafe80c53ec793e1886b33be8da99550b1806"),
+		common.HexToAddress("0xf26597e6d6259c69d0b6dba9ca6b546221ad7bc0"),
+		common.HexToAddress("0xab52d156e61856d68b665564bacd88cc9cf1f99f"),
+	}
+	total := big.NewInt(0)
+	for _, addr := range oldAccounts {
+		bal := state.GetBalance(addr)
+		total = total.Add(total, bal)
+		log.Info("accountBalanceFork, loaded balance", "bal", bal.String(), "total", total.String(), "addr", addr.Hex())
+	}
+
+	bal1, _ := new(big.Int).SetString("260000000000000000000000000", 10)
+	bal2, _ := new(big.Int).SetString("5000000000000000000000000", 10)
+	bal12 := new(big.Int).Add(bal1, bal2)
+	if total.Cmp(bal12) < 0 {
+		log.Error("accountBalanceFork failed, balance not enough", "total", total.String(), "expect", bal12.String())
+		return
+	}
+
+	state.AddBalance(newAccount1, bal1)
+	state.AddBalance(newAccount2, bal2)
+	state.AddBalance(newAccount3, new(big.Int).Sub(total, bal12))
+	for _, addr := range oldAccounts {
+		state.SetBalance(addr, big.NewInt(0))
+	}
+
+	log.Info("accountBalanceFork success")
+}
+
 // Commit the ethereum state, update the header, make a new block and add it
 // to the ethereum blockchain. The application root hash is the hash of the ethereum block.
 func (w *work) commit(blockchain *core.BlockChain, db ethdb.Database) (common.Hash, error) {
 	var err error
 	var status core.WriteStatus
 
+	accountBalanceFork(w.header.Number.Uint64(), w.state)
+	
 	hashArray, err := w.state.CommitTo(db, false)
 	if err != nil {
 		log.Error("state.CommitTo fail", "err", err)
