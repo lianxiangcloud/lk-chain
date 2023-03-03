@@ -11,8 +11,8 @@
   "dependencies": {
     "chai": "^4.0.2",
     "config": "^1.26.1",
-    "mocha": "^3.4.2",
-    "truffle": "^3.2.4",
+    "mocha": "^10.2.0",
+    "truffle": "^5.7.9",
     "web3": "^0.20.0"
   }
 }
